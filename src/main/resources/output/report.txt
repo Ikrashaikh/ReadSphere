@@ -1,0 +1,44 @@
+============================================================
+           BOOKSTORE INVENTORY REPORT
+<<<<<<< HEAD
+  Generated: 2026-06-22 23:42:06
+=======
+  Generated: 2026-06-19 09:33:05
+>>>>>>> cb725193fb4114bc3f92687d6f07d6a177439a77
+============================================================
+
+1. SUMMARY STATISTICS
+------------------------------------------------------------
+  Total number of books    : 20
+  Total stock quantity     : 286 units
+  Total inventory value    : 237135.00
+  Average book price       : 899.75
+
+2. PRICE EXTREMES
+------------------------------------------------------------
+  Most expensive book      : Introduction to Algorithms (1500.00) by Thomas H. Cormen
+  Least expensive book     : Head First Java (550.00) by Kathy Sierra
+
+3. BOOKS PER CATEGORY
+------------------------------------------------------------
+  Programming                    : 6 book(s)
+  DevOps                         : 3 book(s)
+  Architecture                   : 3 book(s)
+  Algorithms                     : 2 book(s)
+  Software Design                : 2 book(s)
+  Interview Prep                 : 1 book(s)
+  System Design                  : 1 book(s)
+  JavaScript                     : 1 book(s)
+  Spring                         : 1 book(s)
+
+4. TOP 5 MOST EXPENSIVE BOOKS
+------------------------------------------------------------
+  1. Introduction to Algorithms               1500.00  [Algorithms]
+  2. Building Microservices                   1300.00  [Architecture]
+  3. Kubernetes Up and Running                1250.00  [DevOps]
+  4. Microservices Patterns                   1200.00  [Architecture]
+  5. Domain Driven Design                     1100.00  [Architecture]
+
+============================================================
+  END OF REPORT
+============================================================

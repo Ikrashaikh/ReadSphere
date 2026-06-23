@@ -1,0 +1,21 @@
+id	bookName	authorName	category	publisher	price	quantity	publishedYear	isbn	language
+1	Clean Code	Robert C. Martin	Programming	Prentice Hall	599	20	2008	9.78013E+12	English
+2	Effective Java	Joshua Bloch	Programming	Addison-Wesley	699	15	2018	9.78013E+12	English
+3	Spring in Action	Craig Walls	Programming	Manning	799	10	2022	9.78162E+12	English
+4	Java Concurrency in Practice	Brian Goetz	Programming	Addison-Wesley	899	8	2006	9.78032E+12	English
+5	Design Patterns	Erich Gamma	Software Design	Pearson	999	12	1994	9.7802E+12	English
+6	The Pragmatic Programmer	Andrew Hunt	Programming	Pearson	650	18	1999	9.78014E+12	English
+7	Refactoring	Martin Fowler	Software Design	Addison-Wesley	850	14	2018	9.78013E+12	English
+8	Head First Java	Kathy Sierra	Programming	OReilly	550	25	2005	9.7806E+12	English
+9	Microservices Patterns	Chris Richardson	Architecture	Manning	1200	7	2018	9.78162E+12	English
+10	Domain Driven Design	Eric Evans	Architecture	Addison-Wesley	1100	5	2003	9.78032E+12	English
+11	System Design Interview	Alex Xu	System Design	Independently Published	950	22	2020	9.78174E+12	English
+12	Grokking Algorithms	Aditya Bhargava	Algorithms	Manning	700	16	2016	9.78162E+12	English
+13	Introduction to Algorithms	Thomas H. Cormen	Algorithms	MIT Press	1500	9	2009	9.78026E+12	English
+14	Cracking the Coding Interview	Gayle Laakmann McDowell	Interview Prep	CareerCup	900	30	2015	9.78098E+12	English
+15	You Dont Know JS	Kyle Simpson	JavaScript	OReilly	650	17	2020	9.7811E+12	English
+16	Spring Start Here	Laurentiu Spilca	Spring	Manning	850	11	2021	9.78162E+12	English
+17	Building Microservices	Sam Newman	Architecture	OReilly	1300	6	2021	9.78149E+12	English
+18	Kubernetes Up and Running	Kelsey Hightower	DevOps	OReilly	1250	8	2022	9.7811E+12	English
+19	Docker Deep Dive	Nigel Poulton	DevOps	Independently Published	800	14	2023	9.78152E+12	English
+20	The Phoenix Project	Gene Kim	DevOps	IT Revolution	750	19	2018	9.78194E+12	English
