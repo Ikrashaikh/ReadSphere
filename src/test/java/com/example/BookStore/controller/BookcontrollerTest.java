@@ -133,6 +133,16 @@ class BookcontrollerTest {
     }
 
     @Test
+    void malformedJsonReturnsBadRequest() throws Exception {
+        mockMvc.perform(post("/books")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{invalid json}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
+    }
+
+    @Test
     void serviceRuntimeExceptionMapsToGenericErrorResponse() throws Exception {
         when(bookServices.getBooksByCategory("Programming"))
                 .thenThrow(new IllegalStateException("boom"));
