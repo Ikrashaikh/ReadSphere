@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * Service responsible for loading books from the CSV file at startup
@@ -94,7 +95,12 @@ public class BookServices {
 
     /** Returns an unmodifiable snapshot of all books. */
     public List<BookModel> getAllBooks() {
-        return List.copyOf(books);
+        return getAllBooks(0, Integer.MAX_VALUE, "id", "asc");
+    }
+
+    /** Returns a paged and sorted snapshot of all books. */
+    public List<BookModel> getAllBooks(int page, int pageSize, String sortBy, String sortDirection) {
+        return applyPaginationAndSorting(books, page, pageSize, sortBy, sortDirection);
     }
 
     /**
@@ -111,16 +117,28 @@ public class BookServices {
 
     /** Returns all books whose category matches (case-insensitive). */
     public List<BookModel> getBooksByCategory(String category) {
-        return books.stream()
+        return getBooksByCategory(category, 0, Integer.MAX_VALUE, "id", "asc");
+    }
+
+    /** Returns a paged and sorted snapshot of books in the given category. */
+    public List<BookModel> getBooksByCategory(String category, int page, int pageSize, String sortBy, String sortDirection) {
+        List<BookModel> filtered = books.stream()
                 .filter(b -> b.getCategory().equalsIgnoreCase(category))
                 .toList();
+        return applyPaginationAndSorting(filtered, page, pageSize, sortBy, sortDirection);
     }
 
     /** Returns all books whose author name matches (case-insensitive). */
     public List<BookModel> getBooksByAuthor(String authorName) {
-        return books.stream()
+        return getBooksByAuthor(authorName, 0, Integer.MAX_VALUE, "id", "asc");
+    }
+
+    /** Returns a paged and sorted snapshot of books by the given author. */
+    public List<BookModel> getBooksByAuthor(String authorName, int page, int pageSize, String sortBy, String sortDirection) {
+        List<BookModel> filtered = books.stream()
                 .filter(b -> b.getAuthorName().equalsIgnoreCase(authorName))
                 .toList();
+        return applyPaginationAndSorting(filtered, page, pageSize, sortBy, sortDirection);
     }
 
     // -------------------------------------------------------------------------
@@ -203,6 +221,39 @@ public class BookServices {
 
     private boolean idExists(Integer id) {
         return books.stream().anyMatch(b -> b.getId().equals(id));
+    }
+
+    private List<BookModel> applyPaginationAndSorting(List<BookModel> source, int page, int pageSize, String sortBy, String sortDirection) {
+        List<BookModel> sorted = new ArrayList<>(source);
+        sorted.sort(buildComparator(sortBy, sortDirection));
+
+        int effectivePage = Math.max(page, 0);
+        int effectivePageSize = Math.max(pageSize, 1);
+        int fromIndex = effectivePage * effectivePageSize;
+
+        if (fromIndex >= sorted.size()) {
+            return List.of();
+        }
+
+        int toIndex = Math.min(fromIndex + effectivePageSize, sorted.size());
+        return List.copyOf(sorted.subList(fromIndex, toIndex));
+    }
+
+    private Comparator<BookModel> buildComparator(String sortBy, String sortDirection) {
+        Comparator<BookModel> comparator = switch (sortBy == null ? "id" : sortBy.trim().toLowerCase()) {
+            case "bookname" -> Comparator.comparing(BookModel::getBookName, String.CASE_INSENSITIVE_ORDER);
+            case "authorname" -> Comparator.comparing(BookModel::getAuthorName, String.CASE_INSENSITIVE_ORDER);
+            case "category" -> Comparator.comparing(BookModel::getCategory, String.CASE_INSENSITIVE_ORDER);
+            case "publisher" -> Comparator.comparing(BookModel::getPublisher, String.CASE_INSENSITIVE_ORDER);
+            case "price" -> Comparator.comparingDouble(BookModel::getPrice);
+            case "quantity" -> Comparator.comparingInt(BookModel::getQuantity);
+            case "publishedyear" -> Comparator.comparingInt(BookModel::getPublishedYear);
+            case "isbn" -> Comparator.comparing(BookModel::getIsbn, String.CASE_INSENSITIVE_ORDER);
+            case "language" -> Comparator.comparing(BookModel::getLanguage, String.CASE_INSENSITIVE_ORDER);
+            default -> Comparator.comparingInt(BookModel::getId);
+        };
+
+        return "desc".equalsIgnoreCase(sortDirection) ? comparator.reversed() : comparator;
     }
 
     /**

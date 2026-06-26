@@ -2,6 +2,8 @@ package com.example.BookStore.controller;
 
 import com.example.BookStore.model.BookModel;
 import com.example.BookStore.services.BookServices;
+import com.example.BookStore.services.JsonExportService;
+import com.example.BookStore.services.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -12,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,10 +24,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
 
 /**
@@ -48,14 +56,19 @@ public class Bookcontroller {
     private static final Logger log = LoggerFactory.getLogger(Bookcontroller.class);
 
     private final BookServices bookServices;
+    private final ReportService reportService;
+    private final JsonExportService jsonExportService;
 
-    public Bookcontroller(BookServices bookServices) {
+    @Autowired
+    public Bookcontroller(BookServices bookServices, ReportService reportService, JsonExportService jsonExportService) {
         this.bookServices = bookServices;
+        this.reportService = reportService;
+        this.jsonExportService = jsonExportService;
     }
 
-    // =========================================================================
+
     // READ
-    // =========================================================================
+   
 
     @Operation(summary = "Get all books", description = "Returns the complete list of books loaded from books.csv.")
     @ApiResponses(@ApiResponse(
@@ -63,9 +76,17 @@ public class Bookcontroller {
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
                     array = @ArraySchema(schema = @Schema(implementation = BookModel.class)))))
     @GetMapping
-    public ResponseEntity<List<BookModel>> getAllBooks() {
-        log.debug("GET /books");
-        List<BookModel> books = bookServices.getAllBooks();
+    public ResponseEntity<List<BookModel>> getAllBooks(
+            @Parameter(description = "Page number to retrieve (starting at 0)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of books per page", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "Field to sort by", example = "price")
+            @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc", example = "asc")
+            @RequestParam(defaultValue = "asc") String sortDirection) {
+        log.debug("GET /books?page={} pageSize={} sortBy={} sortDirection={}", page, pageSize, sortBy, sortDirection);
+        List<BookModel> books = bookServices.getAllBooks(page, pageSize, sortBy, sortDirection);
         log.info("GET /books – returning {} books", books.size());
         return ResponseEntity.ok(books);
     }
@@ -91,8 +112,7 @@ public class Bookcontroller {
         return ResponseEntity.ok(book);
     }
 
-    // -------------------------------------------------------------------------
-
+    
     @Operation(summary = "Get books by category", description = "Returns all books in the given category (case-insensitive).")
     @ApiResponses(@ApiResponse(
             responseCode = "200", description = "Books retrieved",
@@ -101,10 +121,18 @@ public class Bookcontroller {
     @GetMapping("/category/{category}")
     public ResponseEntity<List<BookModel>> getBooksByCategory(
             @Parameter(description = "Category name, e.g. Programming", required = true, example = "Programming")
-            @PathVariable String category) {
+            @PathVariable String category,
+            @Parameter(description = "Page number to retrieve (starting at 0)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of books per page", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "Field to sort by", example = "price")
+            @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc", example = "asc")
+            @RequestParam(defaultValue = "asc") String sortDirection) {
 
-        log.debug("GET /books/category/{}", category);
-        List<BookModel> books = bookServices.getBooksByCategory(category);
+        log.debug("GET /books/category/{}?page={} pageSize={} sortBy={} sortDirection={}", category, page, pageSize, sortBy, sortDirection);
+        List<BookModel> books = bookServices.getBooksByCategory(category, page, pageSize, sortBy, sortDirection);
         log.info("GET /books/category/{} – returning {} books", category, books.size());
         return ResponseEntity.ok(books);
     }
@@ -119,10 +147,18 @@ public class Bookcontroller {
     @GetMapping("/author/{authorName}")
     public ResponseEntity<List<BookModel>> getBooksByAuthor(
             @Parameter(description = "Full name of the author", required = true, example = "Martin Fowler")
-            @PathVariable String authorName) {
+            @PathVariable String authorName,
+            @Parameter(description = "Page number to retrieve (starting at 0)", example = "0")
+            @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Number of books per page", example = "10")
+            @RequestParam(defaultValue = "10") int pageSize,
+            @Parameter(description = "Field to sort by", example = "price")
+            @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(description = "Sort direction: asc or desc", example = "asc")
+            @RequestParam(defaultValue = "asc") String sortDirection) {
 
-        log.debug("GET /books/author/{}", authorName);
-        List<BookModel> books = bookServices.getBooksByAuthor(authorName);
+        log.debug("GET /books/author/{}?page={} pageSize={} sortBy={} sortDirection={}", authorName, page, pageSize, sortBy, sortDirection);
+        List<BookModel> books = bookServices.getBooksByAuthor(authorName, page, pageSize, sortBy, sortDirection);
         log.info("GET /books/author/{} – returning {} books", authorName, books.size());
         return ResponseEntity.ok(books);
     }
@@ -216,5 +252,46 @@ public class Bookcontroller {
         bookServices.deleteBook(id);
         log.info("DELETE /books/{} – deleted", id);
         return ResponseEntity.noContent().build();
+    }
+
+    // =========================================================================
+    // REPORT & EXPORT
+    // =========================================================================
+
+    @Operation(summary = "View inventory report", description = "Returns the latest inventory report as plain text.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Report returned successfully",
+                    content = @Content(mediaType = MediaType.TEXT_PLAIN_VALUE)),
+            @ApiResponse(responseCode = "500", description = "Report file not found or could not be read")
+    })
+    @GetMapping(value = "/report", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> getReport() {
+        log.debug("GET /books/report");
+        try {
+            String content = Files.readString(Paths.get("src/main/resources/output/report.txt"), StandardCharsets.UTF_8);
+            return ResponseEntity.ok(content);
+        } catch (IOException e) {
+            log.error("Failed to read report.txt", e);
+            return ResponseEntity.internalServerError().body("Report file not found. Start the application to generate it.");
+        }
+    }
+
+    @Operation(summary = "Regenerate report and export", description = "Regenerates the inventory report and JSON export from current in-memory data, then returns the report.")
+    @ApiResponses(@ApiResponse(responseCode = "200", description = "Report regenerated and returned",
+            content = @Content(mediaType = MediaType.TEXT_PLAIN_VALUE)))
+    @PostMapping(value = "/report/regenerate", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> regenerateReport() {
+        log.debug("POST /books/report/regenerate");
+        List<BookModel> books = bookServices.getAllBooks();
+        reportService.generateReport(books);
+        jsonExportService.exportToJson(books);
+        try {
+            String content = Files.readString(Paths.get("src/main/resources/output/report.txt"), StandardCharsets.UTF_8);
+            log.info("POST /books/report/regenerate – report regenerated for {} books", books.size());
+            return ResponseEntity.ok(content);
+        } catch (IOException e) {
+            log.error("Failed to read regenerated report.txt", e);
+            return ResponseEntity.internalServerError().body("Report regenerated but could not be read.");
+        }
     }
 }

@@ -53,6 +53,26 @@ class BookServicesTest {
     }
 
     @Test
+    void getAllBooksSupportsPaginationAndSorting() {
+        BookModel first = book(1, "Clean Code", "Robert C. Martin", "Programming");
+        first.setPrice(100.0);
+        BookModel second = book(2, "Refactoring", "Martin Fowler", "Software Design");
+        second.setPrice(80.0);
+        BookModel third = book(3, "Effective Java", "Joshua Bloch", "Programming");
+        third.setPrice(120.0);
+
+        bookServices.addBook(first);
+        bookServices.addBook(second);
+        bookServices.addBook(third);
+
+        List<BookModel> page = bookServices.getAllBooks(0, 2, "price", "desc");
+
+        assertEquals(2, page.size());
+        assertEquals("Effective Java", page.get(0).getBookName());
+        assertEquals("Clean Code", page.get(1).getBookName());
+    }
+
+    @Test
     void updateBookReplacesFieldsAndDeleteBookRemovesEntry() {
         bookServices.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
 

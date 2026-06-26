@@ -4,6 +4,8 @@ import com.example.BookStore.exception.GlobalExceptionHandler;
 import com.example.BookStore.exception.BookNotFoundException;
 import com.example.BookStore.model.BookModel;
 import com.example.BookStore.services.BookServices;
+import com.example.BookStore.services.JsonExportService;
+import com.example.BookStore.services.ReportService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.http.MediaType;
@@ -38,14 +40,14 @@ class BookcontrollerTest {
         @BeforeEach
         void setUp() {
                 bookServices = mock(BookServices.class);
-                mockMvc = MockMvcBuilders.standaloneSetup(new Bookcontroller(bookServices))
+                mockMvc = MockMvcBuilders.standaloneSetup(new Bookcontroller(bookServices, mock(ReportService.class), mock(JsonExportService.class)))
                                 .setControllerAdvice(new GlobalExceptionHandler())
                                 .build();
         }
 
     @Test
     void getAllBooksReturnsBooks() throws Exception {
-        when(bookServices.getAllBooks()).thenReturn(List.of(
+        when(bookServices.getAllBooks(0, 10, "id", "asc")).thenReturn(List.of(
                 book(1, "Clean Code", "Robert C. Martin", "Programming"),
                 book(2, "Refactoring", "Martin Fowler", "Software Design")
         ));
@@ -54,6 +56,21 @@ class BookcontrollerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].bookName").value("Clean Code"));
+    }
+
+    @Test
+    void getAllBooksSupportsPaginationAndSorting() throws Exception {
+        when(bookServices.getAllBooks(1, 2, "price", "desc"))
+                .thenReturn(List.of(book(2, "Refactoring", "Martin Fowler", "Software Design")));
+
+        mockMvc.perform(get("/books")
+                        .param("page", "1")
+                        .param("pageSize", "2")
+                        .param("sortBy", "price")
+                        .param("sortDirection", "desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].bookName").value("Refactoring"));
     }
 
     @Test
@@ -144,7 +161,7 @@ class BookcontrollerTest {
 
     @Test
     void serviceRuntimeExceptionMapsToGenericErrorResponse() throws Exception {
-        when(bookServices.getBooksByCategory("Programming"))
+        when(bookServices.getBooksByCategory("Programming", 0, 10, "id", "asc"))
                 .thenThrow(new IllegalStateException("boom"));
 
         mockMvc.perform(get("/books/category/Programming"))
