@@ -5,6 +5,8 @@ import com.example.BookStore.model.BookModel;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -16,48 +18,25 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
 
-/**
- * Service responsible for loading books from the CSV file at startup
- * and providing full CRUD operations over the in-memory book list.
- *
- * <p>The CSV (actually TSV) file is expected at:
- * {@code src/main/resources/books.csv}
- *
- * <p>Expected header (tab-separated):
- * {@code id  bookName  authorName  category  publisher  price  quantity  publishedYear  isbn  language}
- */
 @Service
-public class BookServices {
+public class BookService {
 
-    private static final Logger log = LoggerFactory.getLogger(BookServices.class);
-
-    /** Tab character used as the column delimiter in books.csv */
+    private static final Logger log = LoggerFactory.getLogger(BookService.class);
     private static final String DELIMITER = "\t";
 
     private final List<BookModel> books = new ArrayList<>();
-
     private final JsonExportService jsonExportService;
-    private final ReportService     reportService;
+    private final ReportService reportService;
 
-    public BookServices(JsonExportService jsonExportService, ReportService reportService) {
+    public BookService(JsonExportService jsonExportService, ReportService reportService) {
         this.jsonExportService = jsonExportService;
-        this.reportService     = reportService;
+        this.reportService = reportService;
     }
 
-    // -------------------------------------------------------------------------
-    // Initialisation
-    // -------------------------------------------------------------------------
-
-    /**
-     * Loads books from {@code books.csv} once the bean is fully initialised.
-     * Any row that cannot be parsed is skipped with a warning.
-     */
     @PostConstruct
     public void loadBooks() {
         log.info("Loading books from classpath:books.csv");
-
         ClassPathResource resource = new ClassPathResource("books.csv");
 
         try (BufferedReader reader = new BufferedReader(
@@ -74,13 +53,14 @@ public class BookServices {
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
                 line = line.trim();
-                if (line.isBlank()) continue;
+                if (line.isBlank()) {
+                    continue;
+                }
                 parseRow(line, lineNumber).ifPresent(books::add);
             }
 
             log.info("Successfully loaded {} books", books.size());
 
-            // Export to JSON and generate report after successful CSV load
             jsonExportService.exportToJson(List.copyOf(books));
             reportService.generateReport(List.copyOf(books));
 
@@ -89,25 +69,16 @@ public class BookServices {
         }
     }
 
-    // -------------------------------------------------------------------------
-    // READ
-    // -------------------------------------------------------------------------
-
-    /** Returns an unmodifiable snapshot of all books. */
     public List<BookModel> getAllBooks() {
         return getAllBooks(0, Integer.MAX_VALUE, "id", "asc");
     }
 
-    /** Returns a paged and sorted snapshot of all books. */
+    @Cacheable(value = "books")
     public List<BookModel> getAllBooks(int page, int pageSize, String sortBy, String sortDirection) {
         return applyPaginationAndSorting(books, page, pageSize, sortBy, sortDirection);
     }
 
-    /**
-     * Returns a book by its id.
-     *
-     * @throws BookNotFoundException if no book with the given id exists
-     */
+    @Cacheable(value = "bookById", key = "#id")
     public BookModel getBookById(Integer id) {
         return books.stream()
                 .filter(b -> b.getId().equals(id))
@@ -115,12 +86,11 @@ public class BookServices {
                 .orElseThrow(() -> new BookNotFoundException(id));
     }
 
-    /** Returns all books whose category matches (case-insensitive). */
     public List<BookModel> getBooksByCategory(String category) {
         return getBooksByCategory(category, 0, Integer.MAX_VALUE, "id", "asc");
     }
 
-    /** Returns a paged and sorted snapshot of books in the given category. */
+    @Cacheable(value = "booksByCategory")
     public List<BookModel> getBooksByCategory(String category, int page, int pageSize, String sortBy, String sortDirection) {
         List<BookModel> filtered = books.stream()
                 .filter(b -> b.getCategory().equalsIgnoreCase(category))
@@ -128,12 +98,11 @@ public class BookServices {
         return applyPaginationAndSorting(filtered, page, pageSize, sortBy, sortDirection);
     }
 
-    /** Returns all books whose author name matches (case-insensitive). */
     public List<BookModel> getBooksByAuthor(String authorName) {
         return getBooksByAuthor(authorName, 0, Integer.MAX_VALUE, "id", "asc");
     }
 
-    /** Returns a paged and sorted snapshot of books by the given author. */
+    @Cacheable(value = "booksByAuthor")
     public List<BookModel> getBooksByAuthor(String authorName, int page, int pageSize, String sortBy, String sortDirection) {
         List<BookModel> filtered = books.stream()
                 .filter(b -> b.getAuthorName().equalsIgnoreCase(authorName))
@@ -141,21 +110,9 @@ public class BookServices {
         return applyPaginationAndSorting(filtered, page, pageSize, sortBy, sortDirection);
     }
 
-    // -------------------------------------------------------------------------
-    // CREATE
-    // -------------------------------------------------------------------------
-
-    /**
-     * Adds a new book to the in-memory store.
-     *
-     * <p>If {@code book.getId()} is {@code null} or already taken,
-     * a new id is generated automatically (max existing id + 1).
-     *
-     * @param book the book to add (id may be omitted)
-     * @return the saved book with its assigned id
-     */
+    @CacheEvict(value = {"books", "bookById", "booksByCategory", "booksByAuthor"}, allEntries = true)
     public BookModel addBook(BookModel book) {
-        // Auto-assign an id if missing or already in use
+        // Auto-assign a unique ID if it is missing or already taken
         if (book.getId() == null || idExists(book.getId())) {
             int nextId = books.stream()
                     .map(BookModel::getId)
@@ -170,20 +127,9 @@ public class BookServices {
         return book;
     }
 
-    // -------------------------------------------------------------------------
-    // UPDATE
-    // -------------------------------------------------------------------------
-
-    /**
-     * Fully replaces the book identified by {@code id} with the provided data.
-     *
-     * @param id          the id of the book to update
-     * @param updatedBook the new book data (id field in body is ignored; path id is used)
-     * @return the updated book
-     * @throws BookNotFoundException if no book with the given id exists
-     */
+    @CacheEvict(value = {"books", "bookById", "booksByCategory", "booksByAuthor"}, allEntries = true)
     public BookModel updateBook(Integer id, BookModel updatedBook) {
-        BookModel existing = getBookById(id); // throws 404 if absent
+        BookModel existing = getBookById(id);
 
         existing.setBookName(updatedBook.getBookName());
         existing.setAuthorName(updatedBook.getAuthorName());
@@ -199,25 +145,12 @@ public class BookServices {
         return existing;
     }
 
-    // -------------------------------------------------------------------------
-    // DELETE
-    // -------------------------------------------------------------------------
-
-    /**
-     * Removes the book with the given id from the in-memory store.
-     *
-     * @param id the id of the book to delete
-     * @throws BookNotFoundException if no book with the given id exists
-     */
+    @CacheEvict(value = {"books", "bookById", "booksByCategory", "booksByAuthor"}, allEntries = true)
     public void deleteBook(Integer id) {
-        BookModel book = getBookById(id); // throws 404 if absent
+        BookModel book = getBookById(id);
         books.remove(book);
         log.info("Deleted book id={} title='{}'", id, book.getBookName());
     }
-
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
 
     private boolean idExists(Integer id) {
         return books.stream().anyMatch(b -> b.getId().equals(id));
@@ -256,10 +189,6 @@ public class BookServices {
         return "desc".equalsIgnoreCase(sortDirection) ? comparator.reversed() : comparator;
     }
 
-    /**
-     * Parses a single TSV row into a {@link BookModel}.
-     * Returns empty if the row has the wrong column count or a bad numeric value.
-     */
     private Optional<BookModel> parseRow(String line, int lineNumber) {
         String[] cols = line.split(DELIMITER, -1);
 

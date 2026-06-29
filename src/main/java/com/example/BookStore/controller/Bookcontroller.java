@@ -1,7 +1,7 @@
 package com.example.BookStore.controller;
 
 import com.example.BookStore.model.BookModel;
-import com.example.BookStore.services.BookServices;
+import com.example.BookStore.services.BookService;
 import com.example.BookStore.services.JsonExportService;
 import com.example.BookStore.services.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,7 +14,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,45 +29,24 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
 
-/**
- * REST controller exposing full CRUD endpoints for the BookStore catalogue.
- *
- * <pre>
- * GET    /books                     – list all books
- * GET    /books/{id}                – get a single book by id (404 if missing)
- * GET    /books/category/{category} – filter by category
- * GET    /books/author/{authorName} – filter by author
- * POST   /books                     – create a new book  (201 Created)
- * PUT    /books/{id}                – fully update a book (404 if missing)
- * DELETE /books/{id}                – delete a book       (204 No Content, 404 if missing)
- * </pre>
- */
 @Tag(name = "Books", description = "Full CRUD operations for the BookStore catalogue")
 @RestController
 @RequestMapping("/books")
-public class Bookcontroller {
+public class BookController {
 
-    private static final Logger log = LoggerFactory.getLogger(Bookcontroller.class);
+    private static final Logger log = LoggerFactory.getLogger(BookController.class);
 
-    private final BookServices bookServices;
+    private final BookService bookService;
     private final ReportService reportService;
     private final JsonExportService jsonExportService;
 
-    @Autowired
-    public Bookcontroller(BookServices bookServices, ReportService reportService, JsonExportService jsonExportService) {
-        this.bookServices = bookServices;
+    public BookController(BookService bookService, ReportService reportService, JsonExportService jsonExportService) {
+        this.bookService = bookService;
         this.reportService = reportService;
         this.jsonExportService = jsonExportService;
     }
-
-
-    // READ
-   
 
     @Operation(summary = "Get all books", description = "Returns the complete list of books loaded from books.csv.")
     @ApiResponses(@ApiResponse(
@@ -86,12 +64,10 @@ public class Bookcontroller {
             @Parameter(description = "Sort direction: asc or desc", example = "asc")
             @RequestParam(defaultValue = "asc") String sortDirection) {
         log.debug("GET /books?page={} pageSize={} sortBy={} sortDirection={}", page, pageSize, sortBy, sortDirection);
-        List<BookModel> books = bookServices.getAllBooks(page, pageSize, sortBy, sortDirection);
+        List<BookModel> books = bookService.getAllBooks(page, pageSize, sortBy, sortDirection);
         log.info("GET /books – returning {} books", books.size());
         return ResponseEntity.ok(books);
     }
-
-    // -------------------------------------------------------------------------
 
     @Operation(summary = "Get a book by ID", description = "Returns a single book by its numeric id. Returns 404 if not found.")
     @ApiResponses({
@@ -105,14 +81,12 @@ public class Bookcontroller {
     public ResponseEntity<BookModel> getBookById(
             @Parameter(description = "Numeric ID of the book", required = true, example = "1")
             @PathVariable Integer id) {
-
         log.debug("GET /books/{}", id);
-        BookModel book = bookServices.getBookById(id);
+        BookModel book = bookService.getBookById(id);
         log.info("GET /books/{} – found '{}'", id, book.getBookName());
         return ResponseEntity.ok(book);
     }
 
-    
     @Operation(summary = "Get books by category", description = "Returns all books in the given category (case-insensitive).")
     @ApiResponses(@ApiResponse(
             responseCode = "200", description = "Books retrieved",
@@ -130,14 +104,11 @@ public class Bookcontroller {
             @RequestParam(defaultValue = "id") String sortBy,
             @Parameter(description = "Sort direction: asc or desc", example = "asc")
             @RequestParam(defaultValue = "asc") String sortDirection) {
-
         log.debug("GET /books/category/{}?page={} pageSize={} sortBy={} sortDirection={}", category, page, pageSize, sortBy, sortDirection);
-        List<BookModel> books = bookServices.getBooksByCategory(category, page, pageSize, sortBy, sortDirection);
+        List<BookModel> books = bookService.getBooksByCategory(category, page, pageSize, sortBy, sortDirection);
         log.info("GET /books/category/{} – returning {} books", category, books.size());
         return ResponseEntity.ok(books);
     }
-
-    // -------------------------------------------------------------------------
 
     @Operation(summary = "Get books by author", description = "Returns all books by the given author (case-insensitive).")
     @ApiResponses(@ApiResponse(
@@ -156,16 +127,11 @@ public class Bookcontroller {
             @RequestParam(defaultValue = "id") String sortBy,
             @Parameter(description = "Sort direction: asc or desc", example = "asc")
             @RequestParam(defaultValue = "asc") String sortDirection) {
-
         log.debug("GET /books/author/{}?page={} pageSize={} sortBy={} sortDirection={}", authorName, page, pageSize, sortBy, sortDirection);
-        List<BookModel> books = bookServices.getBooksByAuthor(authorName, page, pageSize, sortBy, sortDirection);
+        List<BookModel> books = bookService.getBooksByAuthor(authorName, page, pageSize, sortBy, sortDirection);
         log.info("GET /books/author/{} – returning {} books", authorName, books.size());
         return ResponseEntity.ok(books);
     }
-
-    // =========================================================================
-    // CREATE
-    // =========================================================================
 
     @Operation(
             summary     = "Add a new book",
@@ -185,9 +151,8 @@ public class Bookcontroller {
                     required = true,
                     content = @Content(schema = @Schema(implementation = BookModel.class)))
             @RequestBody BookModel book) {
-
         log.debug("POST /books – adding book: {}", book.getBookName());
-        BookModel saved = bookServices.addBook(book);
+        BookModel saved = bookService.addBook(book);
         log.info("POST /books – created book id={}", saved.getId());
 
         URI location = ServletUriComponentsBuilder
@@ -198,10 +163,6 @@ public class Bookcontroller {
 
         return ResponseEntity.created(location).body(saved);
     }
-
-    // =========================================================================
-    // UPDATE
-    // =========================================================================
 
     @Operation(
             summary     = "Update a book",
@@ -224,16 +185,11 @@ public class Bookcontroller {
                     required = true,
                     content = @Content(schema = @Schema(implementation = BookModel.class)))
             @RequestBody BookModel updatedBook) {
-
         log.debug("PUT /books/{}", id);
-        BookModel book = bookServices.updateBook(id, updatedBook);
+        BookModel book = bookService.updateBook(id, updatedBook);
         log.info("PUT /books/{} – updated '{}'", id, book.getBookName());
         return ResponseEntity.ok(book);
     }
-
-    // =========================================================================
-    // DELETE
-    // =========================================================================
 
     @Operation(
             summary     = "Delete a book",
@@ -247,16 +203,11 @@ public class Bookcontroller {
     public ResponseEntity<Void> deleteBook(
             @Parameter(description = "ID of the book to delete", required = true, example = "1")
             @PathVariable Integer id) {
-
         log.debug("DELETE /books/{}", id);
-        bookServices.deleteBook(id);
+        bookService.deleteBook(id);
         log.info("DELETE /books/{} – deleted", id);
         return ResponseEntity.noContent().build();
     }
-
-    // =========================================================================
-    // REPORT & EXPORT
-    // =========================================================================
 
     @Operation(summary = "View inventory report", description = "Returns the latest inventory report as plain text.")
     @ApiResponses({
@@ -268,7 +219,7 @@ public class Bookcontroller {
     public ResponseEntity<String> getReport() {
         log.debug("GET /books/report");
         try {
-            String content = Files.readString(Paths.get("src/main/resources/output/report.txt"), StandardCharsets.UTF_8);
+            String content = reportService.getReportContent();
             return ResponseEntity.ok(content);
         } catch (IOException e) {
             log.error("Failed to read report.txt", e);
@@ -282,11 +233,11 @@ public class Bookcontroller {
     @PostMapping(value = "/report/regenerate", produces = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<String> regenerateReport() {
         log.debug("POST /books/report/regenerate");
-        List<BookModel> books = bookServices.getAllBooks();
+        List<BookModel> books = bookService.getAllBooks();
         reportService.generateReport(books);
         jsonExportService.exportToJson(books);
         try {
-            String content = Files.readString(Paths.get("src/main/resources/output/report.txt"), StandardCharsets.UTF_8);
+            String content = reportService.getReportContent();
             log.info("POST /books/report/regenerate – report regenerated for {} books", books.size());
             return ResponseEntity.ok(content);
         } catch (IOException e) {

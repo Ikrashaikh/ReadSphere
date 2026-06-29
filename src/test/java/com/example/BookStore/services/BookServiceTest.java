@@ -12,44 +12,44 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
-class BookServicesTest {
+class BookServiceTest {
 
-    private BookServices bookServices;
+    private BookService bookService;
 
     @BeforeEach
     void setUp() {
-        bookServices = new BookServices(mock(JsonExportService.class), mock(ReportService.class));
+        bookService = new BookService(mock(JsonExportService.class), mock(ReportService.class));
     }
 
     @Test
     void addBookAssignsNextIdWhenMissingOrDuplicate() {
-        BookModel first = bookServices.addBook(book(10, "Clean Code", "Robert C. Martin", "Programming"));
-        BookModel second = bookServices.addBook(book(null, "Effective Java", "Joshua Bloch", "Programming"));
-        BookModel third = bookServices.addBook(book(10, "Refactoring", "Martin Fowler", "Software Design"));
+        BookModel first = bookService.addBook(book(10, "Clean Code", "Robert C. Martin", "Programming"));
+        BookModel second = bookService.addBook(book(null, "Effective Java", "Joshua Bloch", "Programming"));
+        BookModel third = bookService.addBook(book(10, "Refactoring", "Martin Fowler", "Software Design"));
 
         assertEquals(10, first.getId());
         assertEquals(11, second.getId());
         assertEquals(12, third.getId());
-        assertEquals(3, bookServices.getAllBooks().size());
+        assertEquals(3, bookService.getAllBooks().size());
     }
 
     @Test
     void getBookByIdReturnsMatchAndThrowsWhenMissing() {
-        bookServices.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
+        bookService.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
 
-        assertEquals("Clean Code", bookServices.getBookById(1).getBookName());
-        assertThrows(BookNotFoundException.class, () -> bookServices.getBookById(99));
+        assertEquals("Clean Code", bookService.getBookById(1).getBookName());
+        assertThrows(BookNotFoundException.class, () -> bookService.getBookById(99));
     }
 
     @Test
     void filtersBooksByCategoryAndAuthorIgnoringCase() {
-        bookServices.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
-        bookServices.addBook(book(2, "Refactoring", "Martin Fowler", "Software Design"));
-        bookServices.addBook(book(3, "Effective Java", "Joshua Bloch", "Programming"));
+        bookService.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
+        bookService.addBook(book(2, "Refactoring", "Martin Fowler", "Software Design"));
+        bookService.addBook(book(3, "Effective Java", "Joshua Bloch", "Programming"));
 
-        assertEquals(2, bookServices.getBooksByCategory("programming").size());
-        assertEquals(1, bookServices.getBooksByAuthor("martin fowler").size());
-        assertEquals("Refactoring", bookServices.getBooksByAuthor("MARTIN FOWLER").get(0).getBookName());
+        assertEquals(2, bookService.getBooksByCategory("programming").size());
+        assertEquals(1, bookService.getBooksByAuthor("martin fowler").size());
+        assertEquals("Refactoring", bookService.getBooksByAuthor("MARTIN FOWLER").get(0).getBookName());
     }
 
     @Test
@@ -61,11 +61,11 @@ class BookServicesTest {
         BookModel third = book(3, "Effective Java", "Joshua Bloch", "Programming");
         third.setPrice(120.0);
 
-        bookServices.addBook(first);
-        bookServices.addBook(second);
-        bookServices.addBook(third);
+        bookService.addBook(first);
+        bookService.addBook(second);
+        bookService.addBook(third);
 
-        List<BookModel> page = bookServices.getAllBooks(0, 2, "price", "desc");
+        List<BookModel> page = bookService.getAllBooks(0, 2, "price", "desc");
 
         assertEquals(2, page.size());
         assertEquals("Effective Java", page.get(0).getBookName());
@@ -74,7 +74,7 @@ class BookServicesTest {
 
     @Test
     void updateBookReplacesFieldsAndDeleteBookRemovesEntry() {
-        bookServices.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
+        bookService.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
 
         BookModel updated = book(99, "Clean Architecture", "Robert C. Martin", "Architecture");
         updated.setPublisher("Prentice Hall");
@@ -84,21 +84,21 @@ class BookServicesTest {
         updated.setIsbn("9780134494166");
         updated.setLanguage("English");
 
-        BookModel result = bookServices.updateBook(1, updated);
+        BookModel result = bookService.updateBook(1, updated);
 
         assertEquals("Clean Architecture", result.getBookName());
         assertEquals("Architecture", result.getCategory());
         assertEquals(799.0, result.getPrice());
 
-        bookServices.deleteBook(1);
-        assertTrue(bookServices.getAllBooks().isEmpty());
+        bookService.deleteBook(1);
+        assertTrue(bookService.getAllBooks().isEmpty());
     }
 
     @Test
     void returnedBookListIsUnmodifiableSnapshot() {
-        bookServices.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
+        bookService.addBook(book(1, "Clean Code", "Robert C. Martin", "Programming"));
 
-        List<BookModel> books = bookServices.getAllBooks();
+        List<BookModel> books = bookService.getAllBooks();
 
         assertThrows(UnsupportedOperationException.class, () -> books.add(book(2, "New Book", "Author", "Category")));
     }

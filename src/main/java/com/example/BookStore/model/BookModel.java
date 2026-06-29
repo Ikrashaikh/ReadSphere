@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-
-// Represents a book entity loaded from books.csv.
 @Schema(description = "Represents a book in the BookStore catalogue")
 @Data
 @Builder

@@ -7,11 +7,6 @@ import io.swagger.v3.oas.models.info.License;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Configures the OpenAPI / Swagger metadata shown in the Swagger UI.
- * UI is available at: http://localhost:8080/swagger-ui/index.html
- * Raw JSON spec at:   http://localhost:8080/v3/api-docs
- */
 @Configuration
 public class SwaggerConfig {
 

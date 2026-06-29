@@ -6,9 +6,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/**
- * Simple health check endpoint for service monitoring.
- */
 @RestController
 public class HealthController {
 

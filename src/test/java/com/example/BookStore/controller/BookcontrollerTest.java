@@ -1,13 +1,13 @@
 package com.example.BookStore.controller;
 
-import com.example.BookStore.exception.GlobalExceptionHandler;
 import com.example.BookStore.exception.BookNotFoundException;
+import com.example.BookStore.exception.GlobalExceptionHandler;
 import com.example.BookStore.model.BookModel;
-import com.example.BookStore.services.BookServices;
+import com.example.BookStore.services.BookService;
 import com.example.BookStore.services.JsonExportService;
 import com.example.BookStore.services.ReportService;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -28,26 +28,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-
-//Trial commit Message
-
-class BookcontrollerTest {
+class BookControllerTest {
 
     private MockMvc mockMvc;
+    private BookService bookService;
 
-    private BookServices bookServices;
-
-        @BeforeEach
-        void setUp() {
-                bookServices = mock(BookServices.class);
-                mockMvc = MockMvcBuilders.standaloneSetup(new Bookcontroller(bookServices, mock(ReportService.class), mock(JsonExportService.class)))
-                                .setControllerAdvice(new GlobalExceptionHandler())
-                                .build();
-        }
+    @BeforeEach
+    void setUp() {
+        bookService = mock(BookService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new BookController(bookService, mock(ReportService.class), mock(JsonExportService.class)))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
 
     @Test
     void getAllBooksReturnsBooks() throws Exception {
-        when(bookServices.getAllBooks(0, 10, "id", "asc")).thenReturn(List.of(
+        when(bookService.getAllBooks(0, 10, "id", "asc")).thenReturn(List.of(
                 book(1, "Clean Code", "Robert C. Martin", "Programming"),
                 book(2, "Refactoring", "Martin Fowler", "Software Design")
         ));
@@ -60,7 +56,7 @@ class BookcontrollerTest {
 
     @Test
     void getAllBooksSupportsPaginationAndSorting() throws Exception {
-        when(bookServices.getAllBooks(1, 2, "price", "desc"))
+        when(bookService.getAllBooks(1, 2, "price", "desc"))
                 .thenReturn(List.of(book(2, "Refactoring", "Martin Fowler", "Software Design")));
 
         mockMvc.perform(get("/books")
@@ -75,7 +71,7 @@ class BookcontrollerTest {
 
     @Test
     void getBookByIdReturns404WhenBookIsMissing() throws Exception {
-        when(bookServices.getBookById(99)).thenThrow(new BookNotFoundException(99));
+        when(bookService.getBookById(99)).thenThrow(new BookNotFoundException(99));
 
         mockMvc.perform(get("/books/99"))
                 .andExpect(status().isNotFound())
@@ -85,7 +81,7 @@ class BookcontrollerTest {
 
     @Test
     void getBookByIdReturnsBook() throws Exception {
-        when(bookServices.getBookById(1)).thenReturn(book(1, "Clean Code", "Robert C. Martin", "Programming"));
+        when(bookService.getBookById(1)).thenReturn(book(1, "Clean Code", "Robert C. Martin", "Programming"));
 
         mockMvc.perform(get("/books/1"))
                 .andExpect(status().isOk())
@@ -94,7 +90,7 @@ class BookcontrollerTest {
 
     @Test
     void postBookCreatesResourceWithLocationHeader() throws Exception {
-        when(bookServices.addBook(any(BookModel.class)))
+        when(bookService.addBook(any(BookModel.class)))
                 .thenReturn(book(21, "Domain Driven Design", "Eric Evans", "Architecture"));
 
         mockMvc.perform(post("/books")
@@ -119,7 +115,7 @@ class BookcontrollerTest {
 
     @Test
     void putBookUpdatesBook() throws Exception {
-        when(bookServices.updateBook(eq(1), any(BookModel.class)))
+        when(bookService.updateBook(eq(1), any(BookModel.class)))
                 .thenReturn(book(1, "Clean Architecture", "Robert C. Martin", "Architecture"));
 
         mockMvc.perform(put("/books/1")
@@ -146,7 +142,7 @@ class BookcontrollerTest {
         mockMvc.perform(delete("/books/1"))
                 .andExpect(status().isNoContent());
 
-        verify(bookServices).deleteBook(1);
+        verify(bookService).deleteBook(1);
     }
 
     @Test
@@ -161,7 +157,7 @@ class BookcontrollerTest {
 
     @Test
     void serviceRuntimeExceptionMapsToGenericErrorResponse() throws Exception {
-        when(bookServices.getBooksByCategory("Programming", 0, 10, "id", "asc"))
+        when(bookService.getBooksByCategory("Programming", 0, 10, "id", "asc"))
                 .thenThrow(new IllegalStateException("boom"));
 
         mockMvc.perform(get("/books/category/Programming"))
